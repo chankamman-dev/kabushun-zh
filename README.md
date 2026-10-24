@@ -6,7 +6,6 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 - 界面：ARM9 内 2000 余条 UI 字串、对战气泡、人名牌
 - 图片：标题 Logo、开机画面、按钮、横幅、交易员卡片（36 张）、教程图解、新闻标题、喊话特效字等全部重绘
 
-
 ## 打补丁
 
 补丁：[`patch/kabushun_zh.bps`](patch/kabushun_zh.bps)（BPS 格式）
