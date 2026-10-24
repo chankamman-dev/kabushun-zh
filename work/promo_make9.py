@@ -269,7 +269,7 @@ cuts = []; tt = 0.0
 for m in MONT:
     d = (4 if m.startswith('P:') else 2) * BEAT; cuts.append((tt, d, m)); tt += d
 MD = tt
-OPEN_SEGS = [(79.0, 6.0), (61.0, 3.3), (113.0, 6.5), (136.2, 4.4)]       # cn_story3.mp4: prologue + Chart.01 card
+OPEN_SEGS = [(112.5, 14.0), (136.2, 4.4)]       # cn_story3.mp4: prologue + Chart.01 card
 _last = MD - sum(d for _, d in OPEN_SEGS)
 OPEN_SEGS.append((146.0, _last))
 open_clips = [clip('work/promo/cn_story3.mp4', st, d + 0.1) for st, d in OPEN_SEGS]
@@ -345,13 +345,15 @@ o2a = load('work/promo/open2.wav'); o3a = load('work/promo/open3.wav')
 put(o2a, 0.0, D0, 12.0, 1.0, 0.4, 0.15); put(o3a, 4.0, D0 + 12.0, 10.0, 1.0, 0.15, 0.15)
 put(p3, 0.0, D0 + 22.0, 7.0, 1.0, 0.15, 0.15); put(p3, 33.0, D0 + 29.0, 4.0, 1.0, 0.15, 0.15)
 put(p4, 0.0, D0 + 33.0, PD - 33.0 + 0.3, 1.0, 0.15, 0.5)      # game audio during play
-for k_, (st_, tx_, du_) in enumerate(VO):                        # duck music/game under the narration
-    i0 = int((st_ - 0.2) * SR); i1 = int((st_ + du_ + 0.25) * SR)
-    env = np.ones(i1 - i0, np.float32); r = int(0.2 * SR)
-    env[:r] = np.linspace(1, 0.3, r); env[r:-r] = 0.3; env[-r:] = np.linspace(0.3, 1, r)
-    mix[i0:i1] *= env[:, None]
-    v_ = load(f'work/promo/vo2/l{k_:02d}_44.wav'); mix[int(st_ * SR):int(st_ * SR) + len(v_)] += v_ * 1.4
 put(story, M_E0 - 0.6, E0 - 0.6, total - E0 + 0.6, 0.95, 0.3, 2.5)
+duck = np.ones(N, np.float32); r = int(0.25 * SR); DK = 0.16      # duck music/game under the narration (~-16 dB)
+for st_, tx_, du_ in VO:
+    i0 = int((st_ - 0.3) * SR); i1 = int((st_ + du_ + 0.3) * SR)
+    env = np.full(i1 - i0, DK, np.float32); env[:r] = np.linspace(1, DK, r); env[-r:] = np.linspace(DK, 1, r)
+    duck[i0:i1] = np.minimum(duck[i0:i1], env)
+mix *= duck[:, None]
+for k_, (st_, tx_, du_) in enumerate(VO):
+    v_ = load(f'work/promo/vo2/l{k_:02d}_44.wav'); mix[int(st_ * SR):int(st_ * SR) + len(v_)] += v_ * 1.4
 
 
 def synth(kind):
