@@ -6,7 +6,7 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 - 界面：ARM9 内 2000 余条 UI 字串、对战气泡、人名牌
 - 图片：标题 Logo、开机画面、按钮、横幅、交易员卡片（36 张）、教程图解、新闻标题、喊话特效字等全部重绘
 
-本仓库**不包含 ROM 或任何游戏原始数据**，请自备原版 ROM。
+> 本仓库为**私有仓库**，含原版 ROM、汉化 ROM 与解包数据，仅作个人备份，请勿公开或转发。
 
 ## 打补丁
 
@@ -35,9 +35,12 @@ python tools/mkbps.py   # 生成补丁
 | `text/cn/` | 译文：`ksscv_*.txt` 剧情、`arm9.txt` 界面字串、`bubbles.txt` 对战气泡、`cards.txt` 交易员卡片、`segments.txt` / `sprites_plain.txt` 图片文字 |
 | `text/glossary.txt` | 术语与人名对照 |
 | `tools/` | 构建工具：`build.py` 总构建，`gfxpatch.py` 全部图片补丁，`engine.py` 字库/文字引擎补丁，`objedit.py` / `bgedit.py` 精灵与背景编辑，`mkbps.py` 补丁生成 |
-| `work/` | 校对、测试、宣传片等辅助脚本 |
+| `work/` | 校对、测试、宣传片等辅助脚本；`work/fs/` 为解包出的游戏文件 |
+| `rom/` | `Kabu Trader Shun (Japan).nds` 原版 ROM、`kabushun_zh.nds` 汉化 ROM |
+| `extract/` | 解包数据（ARM9、KSSCV 剧本、图像等） |
+| `text/jp/` | 日文原文（剧情与 ARM9 字串） |
 
-构建需要原版 ROM 解出的数据（`text/jp/`、`work/fs/` 等，不随仓库发布），依赖 Python 3、ndspy、Pillow、numpy。
+构建：`python tools/build.py out/kabushun_zh.nds`（`tools/build.py` 读取 `../downloads/nds-20261019/roms/` 下的原版 ROM，可改 `SRC` 指向 `rom/`）。依赖 Python 3、ndspy、Pillow、numpy。
 
 ## 声明
 

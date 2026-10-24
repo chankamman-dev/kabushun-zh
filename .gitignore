@@ -1,4 +1,4 @@
-# 只收录汉化工具、译文和补丁；ROM、游戏原始数据与生成物一律不入库
+# 私有仓库：工具、译文、补丁，加上原版/汉化 ROM、解包数据、日文原文；测试存档与视频等生成物不入库
 /*
 !/.gitignore
 !/README.md
@@ -6,12 +6,16 @@
 !/text/
 !/patch/
 !/work/
-/text/jp/
+!/rom/
+!/extract/
 /work/*
 !/work/*.py
 !/work/*.sh
+!/work/fs/
+/work/fs/_t_*
 /tools/desmume_libretro.dll
 __pycache__/
-*.nds
+/work/*.nds
+/out/
 *.sav
 *.st
