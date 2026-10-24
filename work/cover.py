@@ -25,11 +25,12 @@ for x in range(1150):
 im = Image.composite(Image.new('RGB', (W, H), (2, 4, 14)), im, shade)
 
 logo = Image.open('work/promo/logo_cut.png').convert('RGBA')
-logo = logo.resize((logo.width * 4, logo.height * 4), Image.NEAREST)               # 856x396
+LS = min(1217 / logo.width, 438 / logo.height)                                     # fills the top-left box
+logo = logo.resize((round(logo.width * LS), round(logo.height * LS)), Image.NEAREST)
 glow = Image.new('RGBA', (logo.width + 80, logo.height + 80), (0, 0, 0, 0))
 glow.paste((0, 0, 0, 255), (40, 52), logo.split()[3])
 glow = glow.filter(ImageFilter.GaussianBlur(14))
-im.paste(glow, (40 - 40, 60 - 40), glow); im.paste(logo, (40, 60), logo)
+im.paste(glow, (49 - 40, 93 - 40), glow); im.paste(logo, (49, 93), logo)
 
 
 def big_text(text, size, fill, stroke, stroke_fill, font='noto_black', shadow=8):
@@ -47,10 +48,10 @@ def pixel(text, scale, color, shadow=(0, 0, 0)):
     t = Image.fromarray(a, 'RGBA'); return t.resize((t.width * scale, t.height * scale), Image.NEAREST)
 
 
-t1 = big_text('简体中文完整汉化', 112, (255, 214, 64), 8, (40, 10, 0))
-im.paste(t1, (60, 520), t1)
-sub = pixel('剧情／界面／图片　全部汉化', 4, (215, 228, 255))
-im.paste(sub, (78, 700), sub)
+t1 = big_text('简体中文完整汉化', 150, (255, 214, 64), 10, (40, 10, 0))
+im.paste(t1, (40, 590), t1)
+sub = pixel('剧情／界面／图片　全部汉化', 7, (215, 228, 255))
+im.paste(sub, (60, 840), sub)
 tag = pixel('NDS', 5, (255, 255, 255))
 d = ImageDraw.Draw(im); d.rectangle((W - 230, 50, W - 60, 50 + tag.height + 30), fill=(220, 30, 40))
 im.paste(tag, (W - 145 - tag.width // 2, 65), tag)
