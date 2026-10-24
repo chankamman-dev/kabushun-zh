@@ -4,7 +4,9 @@ import objedit, objgfx, numpy as np
 from PIL import Image, ImageDraw
 args=sys.argv[1:]; out=args.pop(0); N=40
 if args and args[0].startswith("N="): N=int(args.pop(0)[2:])
-of=objedit.ObjFile(open('work/fs/obj_fnt.bin','rb').read(),open('work/fs/obj_dat.bin','rb').read())
+FNT='work/fs/obj_fnt.bin'
+if args and args[0].startswith('F='): FNT=args.pop(0)[2:]
+of=objedit.ObjFile(open(FNT,'rb').read(),open('work/fs/obj_dat.bin','rb').read())
 W=1200; S=Image.new('RGB',(W,8000)); d=ImageDraw.Draw(S); x=y=rh=0
 for s in args:
     si=int(s); seen=set(); k=0

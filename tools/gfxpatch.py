@@ -75,6 +75,7 @@ def apply(rom, report):
     trader_cards(of, report)
     tutorial_pics(of, report)
     intro_logo(of, report)
+    chapter_titles(of, report)
     assert len(of.data) == len(fnt)
     rom.setFileByName('obj_fnt.bin', bytes(of.data))
     bg_files(rom, report)
@@ -86,6 +87,8 @@ def apply(rom, report):
     watermarks(rom, report)
     wall_logos(rom, report)
     boot_screens(rom, report)
+    news_tickers(rom, report)
+    status_card(rom, report)
 
 
 TA_TITLE = ['气势', '转换心情', '动摇', '双刃动摇', '预料之中', '买入煽动', '卖出煽动', '狂欢', '冷却',
@@ -2115,3 +2118,251 @@ def intro_logo(of, report):
             if a[j, i] >= 0.5 and new[y0 + j, x0 + i] >= 0: new[y0 + j, x0 + i] = nearest(P, rgb[j, i], allowed)
     of.write(own, new, clear_hidden=True)
     report.append('intro logo')
+
+
+CHAPTERS = [('奈良崎的工作', '工'), ('股票的世界', '世'), ('对战交易！', '交'), ('股市高手们', '手'), ('股票交易员瞬', '交'),
+            ('本尼菲特的阴影', '的'), ('第一次败北', '败'), ('女操盘手们', '手'), ('再战！', '战'), ('真相大白', '真'),
+            ('股票的极致', '极')]                                     # obj 1, image k = chapter k (Ex, Chart.01..10)
+
+
+def _title_parts(of, si, fi, ymin=60):
+    import segments
+    out = []
+    for p in objedit.objgfx.frames(of.dat[si])[fi][1]:
+        if p[3] < ymin: continue
+        pix, w, h = segments.part_pixels(of, si, (p[0], p[1], 0, 0), objedit.objgfx.frames(of.dat[si])[fi][0])
+        out.append((p, pix, w, h))
+    return out
+
+
+def chapter_titles(of, report):
+    """chapter title cards (obj 1): redraw the crisp final title in CN, then re-create every
+    animation frame by giving the CN title the same horizontal shift + motion blur that the JP
+    frame shows relative to the JP final title."""
+    from PIL import Image, ImageDraw
+    import segments
+    si = 1
+    fr = objedit.objgfx.frames(of.dat[si])
+    ims = objedit.objgfx.images(of.sec(si))
+    X0, Y0, WW, HH = -72, 56, 330, 56                     # common canvas in OAM coordinates
+    def compose(fi):
+        img = fr[fi][0]; pal = objedit.objgfx.palette(of.sec(si), ims[img])
+        a = np.zeros((HH, WW), int); keys = {}
+        for p, pix, w, h in reversed(_title_parts(of, si, fi)):          # front part = first in list
+            for (x, y), k in pix.items():
+                X, Y = p[2] + x - X0, p[3] + y - Y0
+                if 0 <= X < WW and 0 <= Y < HH:
+                    v = segments.get_px(of, k, False)
+                    if v or (Y, X) not in keys: a[Y, X] = v
+                    keys.setdefault((Y, X), []).append(k)
+        return a, keys, pal
+    def rgba(a, pal):
+        P = pal.astype(float); out = np.zeros(a.shape + (4,)); m = a > 0
+        out[m, :3] = P[a[m]]; out[m, 3] = 1; return out
+    def blur(r, s, k):
+        r = np.roll(r, s, 1)
+        if s > 0: r[:, :s] = 0
+        elif s < 0: r[:, s:] = 0
+        if k <= 1: return r
+        pm = r.copy(); pm[..., :3] *= pm[..., 3:4]
+        ker = np.ones(k) / k
+        out = np.stack([np.apply_along_axis(lambda v: np.convolve(v, ker, 'same'), 1, pm[..., c]) for c in range(4)], -1)
+        al = out[..., 3:4]; out[..., :3] = np.where(al > 1e-6, out[..., :3] / np.maximum(al, 1e-6), 0)
+        return out
+    n = 0
+    for img_i, (text, red) in enumerate(CHAPTERS):
+        frames = [fi for fi in range(len(fr)) if fr[fi][0] == img_i and _title_parts(of, si, fi)]
+        if not frames: continue
+        final = frames[-1]
+        A, keys_f, pal = compose(final)
+        P = pal.astype(int); L = P.sum(1)
+        ys, xs = np.where(A > 0)
+        bx0, bx1, by0, by1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+        vals = [int(v) for v in A[A > 0]]
+        reds = {v for v in set(vals) if P[v][0] > 150 and P[v][1] < 110}
+        dark = min(set(vals), key=lambda v: L[v])
+        rowf, rowr = {}, {}
+        for y in range(by0, by1):
+            c = [int(v) for v in A[y] if v > 0 and v != dark and v not in reds and L[v] > 300]
+            if c: rowf[y] = np.mean([P[v] for v in c], 0)
+            c = [int(v) for v in A[y] if v in reds]
+            if c: rowr[y] = np.mean([P[v] for v in c], 0)
+        # crisp CN final as RGBA
+        cov = np.zeros((HH, WW), bool)
+        for (Y, X) in keys_f: cov[Y, X] = True
+        rows_ = [y for y in range(by0, by1) if cov[y].any()]
+        bx0 = max(int(np.where(cov[y])[0].min()) for y in rows_); bx1 = min(int(np.where(cov[y])[0].max()) + 1 for y in rows_)
+        H = by1 - by0; W = bx1 - bx0
+        f = objedit.load_font('noto_black', 64)
+        tw = int(sum(f.getlength(ch) for ch in text)) + 24
+        mo = Image.new('L', (tw, 96)); mf = Image.new('L', (tw, 96)); mr = Image.new('L', (tw, 96))
+        x = 8
+        for ch in text:
+            ImageDraw.Draw(mo).text((x, 8), ch, font=f, fill=255, stroke_width=6, stroke_fill=255)
+            ImageDraw.Draw(mr if ch == red else mf).text((x, 8), ch, font=f, fill=255)
+            x += f.getlength(ch) - 2
+        bb = mo.getbbox()
+        sw = min(W, round((bb[2] - bb[0]) * (H / (bb[3] - bb[1]))))
+        mo, mf, mr = [m.crop(bb).resize((sw, H), Image.LANCZOS) for m in (mo, mf, mr)]
+        o = np.asarray(mo) / 255; fl = np.asarray(mf) / 255; rd = np.asarray(mr) / 255
+        top_f = rowf.get(min(rowf), np.array([255, 255, 255])) if rowf else np.array([255, 255, 255])
+        cn = np.zeros((HH, WW, 4))
+        ox = bx0 + (W - sw) // 2
+        for j in range(H):
+            Y = by0 + j
+            fc = rowf[min(rowf, key=lambda q: abs(q - Y))] if rowf else top_f
+            rc = rowr[min(rowr, key=lambda q: abs(q - Y))] if rowr else np.array([255, 40, 40])
+            for i in range(sw):
+                if o[j, i] < 0.45: continue
+                col = P[dark] * (1 - fl[j, i] - rd[j, i]) + fc * fl[j, i] + rc * rd[j, i]
+                cn[Y, ox + i, :3] = col; cn[Y, ox + i, 3] = 1
+        JPF = rgba(A, pal)
+        allowed = np.array(sorted(set(vals) | {dark}))
+        for fi in frames:
+            B, keys, _ = compose(fi)
+            JB = rgba(B, pal)
+            best = None
+            for k in (1, 3, 5, 7, 9, 13, 17, 23, 31, 41):
+                for s in range(-48, 49, 2):
+                    T = blur(JPF, s, k)
+                    e = np.abs((T[..., 3] > 0.35).astype(float) - JB[..., 3]).sum()
+                    if best is None or e < best[0]: best = (e, s, k)
+            _, s, k = best
+            for s2 in range(s - 2, s + 3):
+                T = blur(JPF, s2, k); e = np.abs((T[..., 3] > 0.35).astype(float) - JB[..., 3]).sum()
+                if e < best[0]: best = (e, s2, k)
+            _, s, k = best
+            C = blur(cn, s, k)
+            out = np.zeros((HH, WW), int)
+            m = C[..., 3] > 0.35
+            for Y, X in zip(*np.where(m)):
+                out[Y, X] = int(nearest(pal, C[Y, X, :3], allowed))
+            for (Y, X), ks in keys.items():
+                for kk in ks: segments.set_px(of, kk, int(out[Y, X]), False)
+            n += 1
+    report.append(f'chapter titles: {n} frames')
+
+
+NEWS_ROWS = [['TOB！', '追加保证金！', '低PBR股热潮！'], ['发生大地震！', '旅行热潮！', '发行MSCB！'],
+             ['登上股票报纸！', '棒球热潮！', '南滨一郎推荐！'], ['丑闻曝光！', '券商上调评级', '发生事故！'],
+             ['游戏热潮！', '公示地价上涨！', '下调预期'], ['低价股热潮！', '商社股热潮！', '上调预期'],
+             ['资源股热潮！', '金融股热潮！', '狂欢化！'], ['新兴股热潮！', '券商下调评级', '取得专利！'],
+             ['IT股热潮！', '一部市场股热潮！'], ['丸菱关联股热潮！', '二部市场股热潮！'],
+             ['帝国关联股热潮！', '高科技股热潮！'], ['热门商品诞生！', '业务合作！']]
+NEWS_SPANS = [[(1, 45), (48, 106), (112, 222)], [(0, 71), (80, 151), (160, 244)], [(0, 71), (80, 151), (160, 244)],
+              [(0, 71), (80, 169), (176, 234)], [(0, 83), (96, 180), (192, 242)], [(0, 83), (96, 180), (192, 242)],
+              [(0, 83), (96, 180), (192, 250)], [(0, 83), (96, 185), (192, 250)], [(4, 110), (112, 222)],
+              [(0, 110), (112, 222)], [(0, 110), (112, 222)], [(1, 97), (112, 171)]]
+RULE_SPANS = {'news_00.bin': [[(0, 118), (128, 250)], [(0, 131), (132, 250)], [(0, 131), (132, 224)], [(0, 111), (112, 255)]],
+              'news_01.bin': [[(0, 101), (102, 256)], [(0, 176)], [(0, 195)], [(0, 218)]],
+              'news_02.bin': [[(0, 218)], [(0, 180)], [(0, 235)], []]}
+NEWS_RULES = {'news_00.bin': [['规则：标准规则', '规则：试炼领域'], ['规则：牛市标准规则', '规则：无尽'],
+                              ['规则：熊市标准规则', '规则：精神战'], ['规则：一边倒', '规则：八击八杀']],
+              'news_01.bin': [['规则：三支箭', '规则：疯狂马卡洛夫'], ['规则：西部德州扑克'],
+                              ['规则：标准规则试炼'], ['规则：牛市标准规则试炼']],
+              'news_02.bin': [['规则：熊市标准规则试炼'], ['规则：一边倒试炼'], ['规则：疯狂马卡洛夫试炼'], []]}
+
+
+def _news_spans(band, rule):
+    """phrase spans (x0, x1) of one 16-px text row: split after '！' glyphs and at wide gaps."""
+    col = band.any(0); runs = []; x = 0
+    while x < 256:
+        if col[x]:
+            s = x
+            while x < 256 and col[x]: x += 1
+            runs.append([s, x])
+        x += 1
+    def bang(r):
+        s, e = r
+        if e - s > 3: return False
+        rows = band[:, s:e].any(1); ys = np.where(rows)[0]
+        return ys.max() - ys.min() >= 8 and any(not rows[y] for y in range(ys.min(), ys.max()))
+    spans = []
+    for i, r in enumerate(runs):
+        if spans and not rule and bang(runs[i]) is False and spans[-1][2]:
+            spans.append([r[0], r[1], False]); continue
+        if not spans or (r[0] - spans[-1][1] >= (8 if rule else 6) and not (not rule and bang(r))):
+            spans.append([r[0], r[1], False])
+        else:
+            spans[-1][1] = r[1]
+        if not rule and bang(r): spans[-1][2] = True
+    return [(s, e) for s, e, _ in spans]
+
+
+def news_tickers(rom, report):
+    """news_00..02: 256x256 1-colour sheets of news / rule phrases used by the trade screen ticker."""
+    import struct as _s
+    n = 0
+    for f, rules in NEWS_RULES.items():
+        d = bytearray(rom.getFileByName(f)); k = _s.unpack_from('<I', d, 0)[0]
+        o = [x & 0x7FFFFFFF for x in _s.unpack_from(f'<{k + 1}I', d, 4)]
+        tiles = np.frombuffer(bytes(d[o[1]:o[2]]), np.uint8).reshape(-1, 8, 8)
+        img = np.zeros((256, 256), np.uint8)
+        for i in range(1024): y, x = divmod(i, 32); img[y * 8:y * 8 + 8, x * 8:x * 8 + 8] = tiles[i]
+        ink = int(np.bincount(img[img > 0]).argmax())
+        new = img.copy()
+        for r, texts in enumerate(NEWS_ROWS + rules):
+            spans = NEWS_SPANS[r] if r < 12 else RULE_SPANS[f][r - 12]
+            if len(spans) != len(texts):
+                report.append(f'{f} row {r}: {len(spans)} spans vs {len(texts)} texts'); continue
+            for (x0, x1), t in zip(spans, texts):
+                new[r * 16:r * 16 + 16, x0:min(256, x1 + 1)] = 0
+                m = objedit.text_mask(t, 12, 'song')
+                m = objedit.squeeze(m, x1 - x0)
+                h, w = m.shape
+                yy = r * 16 + (16 - h) // 2; xx = x0
+                new[yy:yy + h, xx:xx + w][m] = ink
+                n += 1
+        raw = bytearray()
+        for i in range(1024): y, x = divmod(i, 32); raw += new[y * 8:y * 8 + 8, x * 8:x * 8 + 8].tobytes()
+        d[o[1]:o[1] + len(raw)] = raw
+        rom.setFileByName(f, bytes(d))
+    report.append(f'news tickers: {n} phrases')
+
+
+class _BmpOf:
+    """adapter so restyle() can edit a raw 256xN 8bpp bitmap (scr*.bin: pixels + palette)."""
+    def __init__(self, pix, pal):
+        self.c, self.pal = pix, pal
+    def canvas(self, si, fi):
+        return self.c.copy(), np.arange(self.c.size).reshape(self.c.shape), self.pal
+    def write(self, own, new, clear_hidden=False):
+        m = own >= 0
+        self.c.ravel()[own[m].ravel()] = new[m].ravel()
+
+
+SCR9900 = [((6, 7, 36, 24), '相场', 'dark'), ((58, 30, 143, 46), '交易员等级', 'blue'),
+           ((12, 48, 112, 64), '见习交易员', 'dark'), ((72, 112, 138, 128), '持有股票数', 'blue'),
+           ((58, 147, 151, 163), '交易员点数', 'blue'), ((58, 167, 98, 183), '总资产', 'blue')]
+
+
+def status_card(rom, report):
+    import struct as _s
+    d = bytearray(rom.getFileByName('scr9900.bin')); k = _s.unpack_from('<I', d, 0)[0]
+    o = [x & 0x7FFFFFFF for x in _s.unpack_from(f'<{k + 1}I', d, 4)]
+    pix = np.frombuffer(bytes(d[o[0]:o[1]]), np.uint8).reshape(-1, 256).astype(int)
+    pal = np.frombuffer(bytes(d[o[1]:o[1] + 512]), '<u2').astype(int)
+    pal = np.stack([(pal & 31) * 255 // 31, ((pal >> 5) & 31) * 255 // 31, ((pal >> 10) & 31) * 255 // 31], -1).astype(np.uint8)
+    L = pal.astype(int).sum(1); Pi = pal.astype(int)
+    isbg = lambda v: L[v] >= 520 and Pi[v][1] >= Pi[v][2] and Pi[v][1] >= Pi[v][0]
+    for (x0, y0, x1, y1), text, kind in SCR9900:
+        sub = pix[y0:y1, x0:x1]
+        txt = [int(v) for v in sub.ravel() if L[v] < 450]
+        ink = int(np.bincount(txt).argmax()) if kind == 'blue' else int(min(set(txt), key=lambda v: L[v]))
+        src = pix.copy()
+        for y in range(y0, y1):                              # background: same row, 8-px grid period
+            for x in range(x0, x1):
+                for dd in sorted(range(-160, 161, 8), key=abs):
+                    if dd == 0: continue
+                    xx = x + dd
+                    if 0 <= xx < 256 and not (x0 <= xx < x1) and isbg(src[y, xx]):
+                        pix[y, x] = src[y, xx]; break
+        sp = 0
+        while kind == 'blue' and objedit.text_mask(text, 12, 'song', spacing=sp + 1).shape[1] + 1 <= x1 - x0 - 1: sp += 1
+        m = bold(objedit.text_mask(text, 12, 'song', spacing=sp)) if kind == 'blue' else objedit.text_mask(text, 12, 'song')
+        m = objedit.squeeze(m, x1 - x0)
+        stamp(pix, m, y0 + (y1 - y0 - m.shape[0]) // 2, x0, ink)
+    of = _BmpOf(pix, pal)
+    d[o[0]:o[1]] = of.c.astype(np.uint8).tobytes()
+    rom.setFileByName('scr9900.bin', bytes(d))
+    report.append('status card scr9900')

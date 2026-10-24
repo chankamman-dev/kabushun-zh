@@ -4,7 +4,7 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 
 - 剧情：4704 条台词全部翻译并逐句校对
 - 界面：ARM9 内 2000 余条 UI 字串、对战气泡、人名牌
-- 图片：标题 Logo、开机画面、按钮、横幅、交易员卡片（36 张）、教程图解、新闻标题、喊话特效字等全部重绘
+- 图片：标题 Logo、开机画面、章节标题、按钮、横幅、交易员卡片（36 张）、教程图解、新闻标题与滚动新闻、喊话特效字等全部重绘
 
 ## 打补丁
 
@@ -18,7 +18,7 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 | CRC32 | `D5CCB0EE` |
 | SHA-1 | `960511cfe060f9ffb899921f7088398c533fb2c4` |
 
-用 [Floating IPS](https://www.romhacking.net/utilities/1040/)、[Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) 等任意支持 BPS 的工具打补丁即可。打好后的 ROM：CRC32 `B2D9EE7D`，SHA-1 `1a434289f20c142a497ce61bf8e945b0455c5595`。
+用 [Floating IPS](https://www.romhacking.net/utilities/1040/)、[Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) 等任意支持 BPS 的工具打补丁即可。打好后的 ROM：CRC32 `D0D99D5C`，SHA-1 `e53f4b19fcd97f96cf880fb0ba7930f2949dfca2`。
 
 也可以用本仓库的脚本（Python 3）：
 
