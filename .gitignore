@@ -1,0 +1,17 @@
+# 只收录汉化工具、译文和补丁；ROM、游戏原始数据与生成物一律不入库
+/*
+!/.gitignore
+!/README.md
+!/tools/
+!/text/
+!/patch/
+!/work/
+/text/jp/
+/work/*
+!/work/*.py
+!/work/*.sh
+/tools/desmume_libretro.dll
+__pycache__/
+*.nds
+*.sav
+*.st
