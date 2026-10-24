@@ -5,8 +5,9 @@ from PIL import Image, ImageDraw, ImageFilter
 sys.path.insert(0, 'tools')
 import objedit
 
-W, H = 1920, 1080
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'out/bilibili_cover.png'
+R43 = len(sys.argv) > 2 and sys.argv[2] == '4:3'                       # Bilibili home-feed cover
+W, H = (1440, 1080) if R43 else (1920, 1080)
 shun = Image.open('work/promo/cg/ta_bg32_1.png').convert('RGB')
 title = Image.open('work/promo/pair_title_cn.png').convert('RGB')
 
@@ -17,20 +18,22 @@ mask = Image.new('L', art.size, 255)                                     # soft 
 md = ImageDraw.Draw(mask)
 for x in range(320):
     md.line([(x, 0), (x, art.height)], fill=int(255 * (x / 320) ** 1.4))
-im.paste(art, (W - art.width + 260, -30), mask)
+im.paste(art, (W - art.width + (420 if R43 else 260), -40), mask)
 
 shade = Image.new('L', (W, H), 0); sd = ImageDraw.Draw(shade)          # darken the left for the text
-for x in range(1150):
-    sd.line([(x, 0), (x, H)], fill=int(200 * (1 - x / 1150) ** 1.1))
+SW = 980 if R43 else 1150
+for x in range(SW):
+    sd.line([(x, 0), (x, H)], fill=int(200 * (1 - x / SW) ** 1.1))
 im = Image.composite(Image.new('RGB', (W, H), (2, 4, 14)), im, shade)
 
 logo = Image.open('work/promo/logo_cut.png').convert('RGBA')
-LS = min(1217 / logo.width, 438 / logo.height)                                     # fills the top-left box
+LS = min((1000 if R43 else 1217) / logo.width, 438 / logo.height)                                     # fills the top-left box
 logo = logo.resize((round(logo.width * LS), round(logo.height * LS)), Image.NEAREST)
 glow = Image.new('RGBA', (logo.width + 80, logo.height + 80), (0, 0, 0, 0))
 glow.paste((0, 0, 0, 255), (40, 52), logo.split()[3])
 glow = glow.filter(ImageFilter.GaussianBlur(14))
-im.paste(glow, (49 - 40, 93 - 40), glow); im.paste(logo, (49, 93), logo)
+LX, LY = (40, 70) if R43 else (49, 93)
+im.paste(glow, (LX - 40, LY - 40), glow); im.paste(logo, (LX, LY), logo)
 
 
 def big_text(text, size, fill, stroke, stroke_fill, font='noto_black', shadow=8):
@@ -48,13 +51,13 @@ def pixel(text, scale, color, shadow=(0, 0, 0)):
     t = Image.fromarray(a, 'RGBA'); return t.resize((t.width * scale, t.height * scale), Image.NEAREST)
 
 
-t1 = big_text('简体中文完整汉化', 150, (255, 214, 64), 10, (40, 10, 0))
-im.paste(t1, (40, 590), t1)
-sub = pixel('剧情／界面／图片　全部汉化', 7, (215, 228, 255))
-im.paste(sub, (60, 840), sub)
+t1 = big_text('简体中文完整汉化', 124 if R43 else 150, (255, 214, 64), 10, (40, 10, 0))
+im.paste(t1, (40, 590 if R43 else 590), t1)
+sub = pixel('剧情／界面／图片　全部汉化', 6 if R43 else 7, (215, 228, 255))
+im.paste(sub, (60, 820 if R43 else 840), sub)
 tag = pixel('NDS', 5, (255, 255, 255))
 d = ImageDraw.Draw(im); d.rectangle((W - 230, 50, W - 60, 50 + tag.height + 30), fill=(220, 30, 40))
 im.paste(tag, (W - 145 - tag.width // 2, 65), tag)
 im.save(OUT)
-im.resize((1146, 645), Image.LANCZOS).save(OUT.replace('.png', '_small.jpg'), quality=92)
+im.resize((1146, 860) if R43 else (1146, 645), Image.LANCZOS).save(OUT.replace('.png', '_small.jpg'), quality=92)
 print(OUT)
