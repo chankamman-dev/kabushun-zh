@@ -6,6 +6,11 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 - 界面：ARM9 内 2000 余条 UI 字串、对战气泡、人名牌
 - 图片：标题 Logo、开机画面、章节标题、按钮、横幅、交易员卡片（36 张）、教程图解、新闻标题与滚动新闻、喊话特效字等全部重绘
 
+## 更新记录
+
+- **v1.0.1**（2026-10-25）：修复 DSi / 3DS 实机用 TWiLight Menu++（nds-bootstrap）启动时报错 “An error has occurred”。原因是重新压缩 ARM9 后在末尾补了零，头部记录的 ARM9 大小与压缩数据终点不一致，nds-bootstrap 因此把压缩代码当成未压缩代码去打补丁。游戏内容无变化，melonDS 等模拟器原本就不受影响。
+- **v1.0**（2026-10-25）：首个完整版。
+
 ## 打补丁
 
 补丁：[`patch/kabushun_zh.bps`](patch/kabushun_zh.bps)（BPS 格式）
@@ -18,7 +23,7 @@ Nintendo DS《株トレーダー瞬》（Capcom，2007，AK4J）的非官方简�
 | CRC32 | `D5CCB0EE` |
 | SHA-1 | `960511cfe060f9ffb899921f7088398c533fb2c4` |
 
-用 [Floating IPS](https://www.romhacking.net/utilities/1040/)、[Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) 等任意支持 BPS 的工具打补丁即可。打好后的 ROM：CRC32 `D0D99D5C`，SHA-1 `e53f4b19fcd97f96cf880fb0ba7930f2949dfca2`。
+用 [Floating IPS](https://www.romhacking.net/utilities/1040/)、[Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) 等任意支持 BPS 的工具打补丁即可。打好后的 ROM：CRC32 `A40AEDDE`，SHA-1 `5b34c2a5544e844d14bd596eaf47b2466b9d38d3`。
 
 也可以用本仓库的脚本（Python 3）：
 

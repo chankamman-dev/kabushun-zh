@@ -143,11 +143,11 @@ def main(out_path):
     comp = bytearray(cc.compress(bytes(arm9), isArm9=True))
     struct.pack_into('<I', comp, 0xB68 + 0x14, engine.BASE + len(comp))
     assert cc.decompress(bytes(comp)) [0x4000:] == bytes(arm9)[0x4000:]
-    # pad to a fixed size so the ROM layout (and savestates) survive ARM9 tweaks;
-    # the padding lies inside the decompressed area and is overwritten at boot
-    ARM9_FIXED = 0xB8000
-    assert len(comp) <= ARM9_FIXED, f'arm9 {len(comp):#x} > {ARM9_FIXED:#x}'
-    rom.arm9 = bytes(comp) + bytes(ARM9_FIXED - len(comp))
+    # no padding after the compressed ARM9: nds-bootstrap (TWiLight Menu++ on DSi/3DS) and other
+    # loaders decompress it themselves, reading the BLZ footer at load + header arm9 size, so the
+    # header size must end exactly at compressed_static_end (zero padding there = "An error has occurred")
+    assert len(comp) % 4 == 0, f'arm9 {len(comp):#x} not word aligned'
+    rom.arm9 = bytes(comp)
     rom.saveToFile(out_path)
     size = Path(out_path).stat().st_size
     if size > 128 * 1024 << rom.deviceCapacity:
